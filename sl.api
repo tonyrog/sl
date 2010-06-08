@@ -1,0 +1,10 @@
+%% -*- erlang -*-
+%% 
+
+%% Function prefix for implement functions
+{c_function_prefix, "sl_drv_impl"}.
+{c_symbol_prefix, "sl_drv"}.
+
+{erl_symbol_prefix, "sl"}.
+{erl_default_interface, control}.
+

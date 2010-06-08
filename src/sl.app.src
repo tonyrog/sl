@@ -1,0 +1,8 @@
+{application, sl,
+ [{description, "Serial line controller"},
+  {vsn, "%VSN%"},
+  {modules, [sl]},
+  {registered, []},
+  {env, []},
+  {applications,[kernel,stdlib]}
+  ]}.
