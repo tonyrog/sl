@@ -880,7 +880,7 @@ static int do_write_more(sl_t* slp)
 	n = do_write_buf(slp, slp->obuf, n);
     }
 #else
-    int n;
+    int n = 0;
     SysIOVec* vector;
     int count;
 

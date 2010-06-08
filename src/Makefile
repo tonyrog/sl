@@ -1,7 +1,7 @@
 
 MODULES = \
-	sl \
-	slt
+	sl
+
 
 EBIN=../ebin
 ERLC = erlc

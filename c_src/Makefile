@@ -4,11 +4,11 @@
 OSNAME := $(shell uname -s)
 MACHINE := $(shell uname -m)
 
-ERLDIR	:= /usr/local/lib/erlang
+ERLDIR	:= $(shell erl -noshell -eval "io:format([126,115,126,110],[code:root_dir()])" -s erlang halt)
 ERL_C_INCLUDE_DIR := $(ERLDIR)/usr/include
 
 ifeq ($(OSNAME), Linux)
-LD_SHARED=
+LD_SHARED=$(CC) -shared
 DLL_LIBS=
 endif
 
@@ -18,7 +18,7 @@ DLL_LIBS=
 CFLAGS += -m32
 endif
 
-OBJDIR = ../$(TYPE)
+OBJDIR = ../obj/$(TYPE)
 
 DRV_OBJS = $(OBJDIR)/sl_drv.o
 
@@ -50,7 +50,7 @@ clean:
 $(DRV_SO): $(DRV_OBJS)
 	$(LD_SHARED) -o $@ $(DRV_OBJS) $(DLL_LIBS) $(LD_FLAGS) 
 
-sl_drv.o:  cbufv2.h
+$(OBJDIR)/sl_drv.o:  cbufv2.h
 
-%.o:	%.c
+$(OBJDIR)/%.o:	%.c
 	$(CC) -c -o $@ $(CFLAGS) $<
