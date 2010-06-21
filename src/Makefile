@@ -1,6 +1,7 @@
 
 MODULES = \
-	sl
+	sl \
+	sl_drv
 
 
 EBIN=../ebin

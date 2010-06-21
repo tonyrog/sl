@@ -4,8 +4,15 @@
 EAPI_DIR = ../../eapi
 include $(EAPI_DIR)/make/eapi_drv.mk
 
-SL_DRV = ../priv/$(TYPE)/sl_drv.so
-SL_DRV_OBJS = $(OBJDIR)/$(EAPI_PFX)sl_drv.o
+CFLAGS += -I $(EAPI_DIR)/include 
+LDFLAGS += 
+
+SL_DRV = $(PRIVDIR)/sl_drv.so
+SL_DRV_OBJS = \
+	$(OBJDIR)/$(EAPI_PFX)sl_drv.o \
+	$(OBJDIR)/$(EAPI_PFX)sl_drv_impl.o
+
+EAPI_LIB = $(EAPI_DIR)/lib/$(TYPE)/eapi_drv.a
 
 all:
 	$(MAKE) driver TYPE=debug
@@ -31,9 +38,10 @@ clean_internal:
 	rm -f $(SL_DRV_OBJS)
 
 $(SL_DRV): $(SL_DRV_OBJS)
-	$(LD_SHARED) -o $@ $(SL_DRV_OBJS) $(DLL_LIBS) $(LD_FLAGS)
+	$(LD_SHARED) -o $@ $(SL_DRV_OBJS) $(EAPI_LIB) $(LD_FLAGS)
 
-$(OBJDIR)/$(EAPI_PFX)sl_drv.o:  cbufv2.h
+$(OBJDIR)/$(EAPI_PFX)sl_drv_impl.o: $(EAPI_DIR)/include/eapi_drv.h
+$(OBJDIR)/$(EAPI_PFX)sl_drv.o:  $(EAPI_DIR)/include/eapi_drv.h
 
 $(OBJDIR)/$(EAPI_PFX)%.o:	%.c
 	$(CC) -c -o $@ $(CFLAGS) -I$(ERL_C_INCLUDE_DIR) $<

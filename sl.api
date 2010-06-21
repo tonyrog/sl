@@ -1,4 +1,7 @@
 %% -*- erlang -*-
+%% Generate by: 
+%% >  eapi:erl("sl.api", "src/sl_drv").
+%% >  eapi:c("sl.api", "c_src/sl_drv").
 %% 
 
 %% Function prefix for implement functions
@@ -7,4 +10,67 @@
 
 {erl_symbol_prefix, "sl"}.
 {erl_default_interface, control}.
+
+{erl_app_name, "sl"}.
+{erl_srv_name, "sl_drv"}.
+{erl_port_name, multiple}.  %% multi instance
+{erl_reg_name,  "sl_reg"}.
+{erl_driver_name, "sl_drv"}.
+
+{typedef, ok,     {const, atom_t, ok}}.
+{typedef, void,   {const, atom_t, ok}}.
+{typedef, error,  {tuple,[{const,atom_t,error},atom_t]}}.
+
+{function, {union,[ok,error]}, open, []}.
+{function, {union,[ok,error]}, connect, []}.
+{function, {union,[ok,error]}, disconnect, []}.
+{function, {union,[ok,error]}, close, []}.
+{function, {union,[ok,error]}, xon, []}.
+{function, {union,[ok,error]}, xoff, []}.
+{function, {union,[ok,error]}, break, []}.
+{function, {union,[ok,error]}, update, []}.
+{function, {union,[ok,error]}, revert, []}.
+{function, {union,[ok,error]}, sendchar, [{uint8_t, c}]}.
+{function, [command], {union,[ok,error]}, send, [{binary_t, data}]}.
+
+{function, {union,[{tuple,[ok,{list,int32_t}]},error]}, get_baud_rates, []}.
+
+%% Setters
+{function, {union,[ok,error]}, set_device,   [{string_t, name}]}.
+{function, {union,[ok,error]}, set_ibaud,    [{int32_t,  baud}]}.
+{function, {union,[ok,error]}, set_obaud,    [{int32_t,  baud}]}.
+{function, {union,[ok,error]}, set_csize,    [{int32_t,  csize}]}.
+{function, {union,[ok,error]}, set_bufsize,  [{int32_t, bufsize}]}.
+{function, {union,[ok,error]}, set_buftm,    [{int32_t, buftm}]}.
+{function, {union,[ok,error]}, set_stopb,    [{int32_t, stopb}]}.
+{function, {union,[ok,error]}, set_parity,   [{int32_t, parity}]}.
+{function, {union,[ok,error]}, set_hwflow,   [{boolean_t, enable}]}.
+{function, {union,[ok,error]}, set_swflow,   [{boolean_t, enable}]}.
+{function, {union,[ok,error]}, set_xoffchar, [{int32_t, c}]}.
+{function, {union,[ok,error]}, set_xonchar,  [{int32_t, c}]}.
+{function, {union,[ok,error]}, set_eolchar,  [{int32_t, c}]}.
+{function, {union,[ok,error]}, set_eol2char, [{int32_t, c}]}.
+{function, {union,[ok,error]}, set_mode,     [{int32_t, mode}]}.
+
+%% Getters
+{function, {union,[{tuple,[ok,string_t]},error]},  get_device, []}.
+{function, {union,[{tuple,[ok,int32_t]}, error]},  get_ibaud,  []}.
+{function, {union,[{tuple,[ok,int32_t]}, error]},  get_obaud,  []}.
+{function, {union,[{tuple,[ok,int32_t]},error]},   get_csize,  []}.
+{function, {union,[{tuple,[ok,int32_t]},error]},   get_bufsize, []}.
+{function, {union,[{tuple,[ok,int32_t]},error]},   get_buftm,   []}.
+{function, {union,[{tuple,[ok,int32_t]},error]},   get_stopb,  []}.
+{function, {union,[{tuple,[ok,int32_t]},error]},   get_parity,  []}.
+{function, {union,[{tuple,[ok,boolean_t]},error]}, get_hwflow,  []}.
+{function, {union,[{tuple,[ok,boolean_t]},error]}, get_swflow,  []}.
+{function, {union,[{tuple,[ok,int32_t]},error]},   get_xoffchar, []}.
+{function, {union,[{tuple,[ok,int32_t]},error]},   get_xonchar, []}.
+{function, {union,[{tuple,[ok,int32_t]},error]},   get_eolchar, []}.
+{function, {union,[{tuple,[ok,int32_t]},error]},   get_eol2char, []}.
+{function, {union,[{tuple,[ok,uint8_t]},error]},   get_mode,     []}.
+
+
+
+
+
 
