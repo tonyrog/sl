@@ -1,0 +1,9 @@
+@author  Tony Rogvall <tony@rogvall.se>
+@version 1.0
+@title Erlang Serial Line interface.
+@doc This library allows you to handle serial line devices.
+Operations for open/close and control are defined. 
+For example:
+ {ok,S} = sl:open("/dev/ttyxx", [{baud,115200},{stopb,1},{mode,raw}]),
+ sl:send(S, "Hello\r\n").
+

@@ -31,6 +31,10 @@ depend:
 dialyze:
 	dialyzer --src -o dia.out $(ERLC_FLAGS) -c $(MODULES:%=%.erl)
 
+edoc:
+	erl -noshell -pa doc -run edoc_run application "sl" '".."' '[{private,false},no_packages,{sort_functions,false}]'
+
+
 clean:
 	rm -f $(OBJS)
 
