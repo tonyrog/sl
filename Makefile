@@ -2,5 +2,5 @@ all:
 	(cd c_src; make $@)
 	(cd src; make $@)
 
-doc:
+edoc:
 	(cd src; make edoc)
