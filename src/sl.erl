@@ -161,5 +161,8 @@ send(SL, [C]) when is_integer(C), C >= 0, C =< 255 ->
     sl_drv:sendchar(SL, C);
 send(SL, <<C>>) ->
     sl_drv:sendchar(SL, C);
-send(SL, Data) ->
+send(SL, Data) when is_list(Data) ->
+    sl_drv:send(SL, list_to_binary(Data));
+send(SL, Data) when is_binary(Data) ->
     sl_drv:send(SL, Data).
+
