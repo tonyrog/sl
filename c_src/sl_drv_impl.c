@@ -13,6 +13,7 @@
 
 typedef HANDLE  com_t;
 #define INVALID INVALID_HANDLE_VALUE
+#define DRV_EVENT(evt) ((ErlDrvEvent)(evt))
 
 #else
 
@@ -30,16 +31,20 @@ typedef HANDLE  com_t;
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
-
-
-#include "eapi_drv.h"
-#include "sl_drv.h"
+#include <sys/ioctl.h>
 
 typedef int     com_t;
 #define INVALID -1
+#define DRV_EVENT(evt) ((ErlDrvEvent)((long)(evt)))
 
 #endif
 
+#ifdef HAVE_FTDI
+#include "ftd2xx.h"
+#endif
+
+#include "eapi_drv.h"
+#include "sl_drv.h"
 
 static struct _rate {
     int baud;
@@ -153,6 +158,12 @@ static struct _rate {
 #endif
     { -1, B0 }
 };
+
+#ifdef DARWIN
+#define HAVE_C_ISPEED 1
+#define HAVE_C_OSPEED 1
+#endif
+
 #endif
 
 #define SL_MODE_RAW    0
@@ -176,41 +187,44 @@ static struct _rate {
 typedef struct _sl_t
 {
     ErlDrvPort port;
-    com_t      com;       /* Connection handle */
-    int        ilen;     /* length of input buffer */
-    char*      ibuf;     /* Overlapped input buffer */
-    int        i_pending; /* Input is pending */
-    int        olen;     /* length of output buffer */
-    char*      obuf;     /* Overlapped output buffer */
-    int        o_pending; /* Output is pending */
-    int        cmode;    /* current mode */
-    int        ceol;     /* end of line char */
-    int        ceol2;    /* end of line char 2 */
+    com_t      com;       // Connection handle
+    int        ilen;      // length of input buffer
+    char*      ibuf;      // Overlapped input buffer 
+    int        i_pending; // Input is pending 
+    int        olen;      // length of output buffer
+    char*      obuf;      // Overlapped output buffer
+    int        o_pending; // Output is pending
+    int        cmode;     // current mode
+    int        ceol;      // end of line char
+    int        ceol2;     // end of line char 2
 #ifdef __WIN32__
-    OVERLAPPED in;       /* Overlapped input  */
-    OVERLAPPED out;      /* Overlapped output */
-    OVERLAPPED stat;     /* Overlapped status */
-    DWORD      statm;    /* Status result */
-    DCB        tio;      /* Comm parameter block */
+    OVERLAPPED in;        // Overlapped input
+    OVERLAPPED out;       // Overlapped output
+    OVERLAPPED stat;      // Overlapped status
+    DWORD      statm;     // Status result
+    DCB        tio;       // Comm parameter block
 #else
-    struct termios tio;   /* The termios structure */
+    struct termios tio;   // The termios structure
 #endif
-    char*      dev;       /* device name */
-    int        flags;     /* flags FL_ */
-    int        ibaud;     /* input baud rate  */
-    int        obaud;     /* output baud rate  */
-    int        csize;     /* 5,6,7,8 */
-    int        stopb;     /* 1,2 */
-    int        parity;    /* None=0,Odd=1,Even=2 */
-    int        hwflow;    /* Hardware flow control */
-    int        swflow;    /* Software flow control */
-    int        xonchar;   /* XON character (for swflow) */
-    int        xoffchar;  /* XOFF character (for swflow) */
-    int        eolchar;   /* EOL character */
-    int        eol2char;  /* EOL character */
-    int        bufsz;     /* Number of bytes buffer */
-    int        buftm;     /* Buffer fill timeout */
-    int        mode;      /* (pending mode RAW | LINE) */
+    char*      dev;       // device name
+    int        flags;     // flags FL_
+
+
+    
+    int        ibaud;     // input baud rate
+    int        obaud;     // output baud rate
+    int        csize;     // 5,6,7,8 
+    int        stopb;     // 1,2
+    int        parity;    // None=0,Odd=1,Even=2
+    int        hwflow;    // Hardware flow control
+    int        swflow;    // Software flow control
+    int        xonchar;   // XON character (for swflow)
+    int        xoffchar;  // XOFF character (for swflow)
+    int        eolchar;   // EOL character
+    int        eol2char;  // EOL character
+    int        bufsz;     // Number of bytes buffer
+    int        buftm;     // Buffer fill timeout
+    int        mode;      // (pending mode RAW | LINE) 
 } sl_t;
 
 static void sl_ready_input(ErlDrvData drv_data, ErlDrvEvent event); 
@@ -218,12 +232,38 @@ static void sl_ready_output(ErlDrvData drv_data, ErlDrvEvent event);
 
 static ErlDrvEntry sl_drv_entry;
 
+#ifdef HAVE_FTDI
+const char* ft_strerror(FT_STATUS status)
+{
+    switch(status) {
+    case FT_OK:	return "ok";
+    case FT_INVALID_HANDLE: return "invalid handle";
+    case FT_DEVICE_NOT_FOUND: return "device not found";
+    case FT_DEVICE_NOT_OPENED: return "device not opened";
+    case FT_IO_ERROR:	return "io error";
+    case FT_INSUFFICIENT_RESOURCES: return "insufficent resources";
+    case FT_INVALID_PARAMETER: return "invalid paramter";
+    case FT_INVALID_BAUD_RATE: return "invalid baud rate";
+    case FT_DEVICE_NOT_OPENED_FOR_ERASE: return "device not opened for erase";
+    case FT_DEVICE_NOT_OPENED_FOR_WRITE: return "device not opened for write";
+    case FT_FAILED_TO_WRITE_DEVICE: return "faile to write device";
+    case FT_EEPROM_READ_FAILED: return "eeprom read failed";
+    case FT_EEPROM_WRITE_FAILED: return "eeprom write failed";
+    case FT_EEPROM_ERASE_FAILED: return "eeprom erase failed";
+    case FT_EEPROM_NOT_PRESENT: return "eeprom not present";
+    case FT_EEPROM_NOT_PROGRAMMED: return "eeprom not programmed";
+    case FT_INVALID_ARGS: return "invalid arguments";
+    case FT_NOT_SUPPORTED: return "not supported";
+    case FT_OTHER_ERROR: return "other error";
+    default: return "unknown error (%d)";
+    }
+}
+#endif
 
 static unsigned int to_speed(int baud)
 {
     int i = 0;
     int speed = 0;
-
     while((rtab[i].baud != -1) && (baud > rtab[i].baud))
 	i++;
     if (rtab[i].baud == -1)
@@ -235,6 +275,9 @@ static unsigned int to_speed(int baud)
 
 static int from_speed(unsigned int speed)
 {
+#ifdef DIRECT_SPEED
+    return (int) speed;
+#else
     int i = 0;
     int baud;
 
@@ -242,6 +285,7 @@ static int from_speed(unsigned int speed)
 	i++;
     baud = rtab[i].baud;
     return baud;
+#endif
 }
 
 
@@ -288,7 +332,11 @@ static void set_ibaud(sl_t* slp, int baud)
 #ifdef __WIN32__
     slp->tio.BaudRate = to_speed(baud);
 #else
+#ifdef HAVE_C_ISPEED
+    slp->tio.c_ispeed = baud;
+#else
     cfsetispeed(&slp->tio, to_speed(baud));
+#endif
 #endif
 }
 
@@ -298,7 +346,11 @@ static void set_obaud(sl_t* slp, int baud)
 #ifdef __WIN32__
     slp->tio.BaudRate = to_speed(baud);
 #else
+#ifdef HAVE_C_OSPEED
+    slp->tio.c_ospeed = baud;
+#else
     cfsetospeed(&slp->tio, to_speed(baud));
+#endif
 #endif
 }
 
@@ -308,7 +360,11 @@ static int get_ibaud(sl_t* slp)
 #ifdef __WIN32__
     return from_speed(slp->tio.BaudRate);
 #else
+#ifdef HAVE_C_ISPEED
+    return slp->tio.c_ispeed;
+#else
     return from_speed(cfgetispeed(&slp->tio));
+#endif
 #endif
 }
 
@@ -318,7 +374,11 @@ static int get_obaud(sl_t* slp)
 #ifdef __WIN32__
     return from_speed(slp->tio.BaudRate);
 #else
+#ifdef HAVE_C_OSPEED
+    return slp->tio.c_ospeed;
+#else
     return from_speed(cfgetospeed(&slp->tio));
+#endif
 #endif
 }
 
@@ -645,12 +705,12 @@ static void slp_close(sl_t* slp)
     EAPI_DRV_DBG("do_close: %d", slp->com);
     if (slp->com != INVALID) {
 #ifdef __WIN32__
-	driver_select(slp->port, (ErlDrvEvent)slp->in.hEvent,ERL_DRV_READ,0);
-	driver_select(slp->port, (ErlDrvEvent)slp->out.hEvent,ERL_DRV_READ,0);
-	driver_select(slp->port, (ErlDrvEvent)slp->stat.hEvent,ERL_DRV_READ,0);
+	driver_select(slp->port, DRV_EVENT(slp->in.hEvent),ERL_DRV_READ,0);
+	driver_select(slp->port, DRV_EVENT(slp->out.hEvent),ERL_DRV_READ,0);
+	driver_select(slp->port, DRV_EVENT(slp->stat.hEvent),ERL_DRV_READ,0);
 	CloseHandle(slp->com);
 #else
-	driver_select(slp->port, (ErlDrvEvent)slp->com,
+	driver_select(slp->port, DRV_EVENT(slp->com),
 		      ERL_DRV_READ|ERL_DRV_WRITE, 0);
 	/* NOTE! This will flush data not transmitted, otherwise the
 	   driver will hange */
@@ -705,7 +765,7 @@ static UNUSED int do_read(sl_t* slp)
     if (!ReadFile(slp->com, slp->ibuf, slp->bufsz, &n, &slp->in)) {
 	if (GetLastError() == ERROR_IO_PENDING) {
 	    slp->i_pending = 1;
-	    driver_select(slp->port,(ErlDrvEvent)slp->in.hEvent,ERL_DRV_READ,1);
+	    driver_select(slp->port,DRV_EVENT(slp->in.hEvent),ERL_DRV_READ,1);
 	    return 0;
 	}
 	return -1;
@@ -727,7 +787,7 @@ static UNUSED int do_read(sl_t* slp)
 	return n;
     }
     else if ((n < 0) && (errno == EAGAIN)) {
-	driver_select(slp->port, (ErlDrvEvent)slp->com, ERL_DRV_READ, 1);
+	driver_select(slp->port, DRV_EVENT(slp->com), ERL_DRV_READ, 1);
 	return 0;
     }
     return n;
@@ -744,7 +804,7 @@ static int do_write_buf(sl_t*slp, char* buf, int len)
     if (!WriteFile(slp->com, buf, len, &n, &slp->out)) {
 	if (GetLastError() == ERROR_IO_PENDING) {
 	    slp->o_pending = 1;
-	    driver_select(slp->port,(ErlDrvEvent)slp->out.hEvent,ERL_DRV_READ,1);
+	    driver_select(slp->port,DRV_EVENT(slp->out.hEvent),ERL_DRV_READ,1);
 	    return 0;
 	}
 	return -1;
@@ -757,12 +817,12 @@ static int do_write_buf(sl_t*slp, char* buf, int len)
 	EAPI_DRV_DBG("do_write_buf: error=EAGAIN");
 	nb = len;
 	driver_enq(slp->port, buf, nb);
-	driver_select(slp->port,(ErlDrvEvent)slp->com,ERL_DRV_WRITE, 1);
+	driver_select(slp->port,DRV_EVENT(slp->com),ERL_DRV_WRITE, 1);
     }
     else if ((n >= 0) && (n < len)) {
 	nb = len-n;
 	driver_enq(slp->port, buf+n, nb);
-	driver_select(slp->port,(ErlDrvEvent)slp->com,ERL_DRV_WRITE, 1);
+	driver_select(slp->port,DRV_EVENT(slp->com),ERL_DRV_WRITE, 1);
     }
     else if (n < 0) {
 	EAPI_DRV_DBG("do_write_buf: error=%s", strerror(errno));
@@ -797,7 +857,7 @@ static int do_write_more(sl_t* slp)
 	if (n > 0)
 	    driver_deq(slp->port, n);
 	if (driver_sizeq(slp->port) == 0)
-	    driver_select(slp->port,(ErlDrvEvent)slp->com,ERL_DRV_WRITE, 0);
+	    driver_select(slp->port,DRV_EVENT(slp->com),ERL_DRV_WRITE, 0);
     }
 #endif
     EAPI_DRV_DBG("do_write_more: %d", n);
@@ -847,6 +907,7 @@ static int do_open(sl_t* slp)
 			  0);
     if (slp->com == INVALID)
 	return -1;
+    // FIXME chekc return values!
     slp->in.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
     slp->out.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
     slp->stat.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
@@ -861,8 +922,8 @@ static int do_open(sl_t* slp)
     tcflush(slp->com, TCOFLUSH);
     tcflush(slp->com, TCIFLUSH);
     // fcntl(slp->com, F_SETFL, fcntl(slp->com, F_GETFL) & ~O_NONBLOCK);
-
 #endif
+
     if (get_com_state(slp) < 0)
 	return -1;
 
@@ -874,7 +935,6 @@ static int do_open(sl_t* slp)
     slp->tio.c_cflag |= (CLOCAL | CREAD);
 
 #endif
-
     /* setup default state if not set */
     if (!(slp->flags & FL_MODE))
 	slp->mode = SL_MODE_RAW;
@@ -919,6 +979,7 @@ static void sl_init(ErlDrvData d)
     slp->com   = INVALID;
     slp->bufsz = 1;
     slp->buftm = 0;
+    slp->port  = ctx->port;
 
 #ifdef __WIN32__
     memset(&slp->in, 0, sizeof(slp->in));
@@ -946,7 +1007,8 @@ static void sl_finish(ErlDrvData d)
 
 static void sl_ready_input(ErlDrvData data, ErlDrvEvent event)
 {
-    sl_t* slp = (sl_t*) data;
+    eapi_ctx_t* ctx = (eapi_ctx_t*) data;
+    sl_t* slp = (sl_t*) ctx->user_data;
 #ifdef __WIN32__
     DWORD n;
 
@@ -984,12 +1046,13 @@ static void sl_ready_input(ErlDrvData data, ErlDrvEvent event)
 
 static void sl_ready_output(ErlDrvData data, ErlDrvEvent event)
 {
-    sl_t* slp = (sl_t*) data;
+    eapi_ctx_t* ctx = (eapi_ctx_t*) data;
+    sl_t* slp = (sl_t*) ctx->user_data;
 #ifdef __WIN32__
     DWORD n;
     EAPI_DRV_DBG("sl_ready_output: qsize=%d", driver_sizeq(slp->port));
     slp->o_pending = 0;
-    driver_select(slp->port, (ErlDrvEvent)slp->out.hEvent,ERL_DRV_READ,0);
+    driver_select(slp->port, DRV_EVENT(slp->out.hEvent),ERL_DRV_READ,0);
     if (!GetOverlappedResult(slp->com, &slp->out, &n, FALSE)) {
 	/* Output error */
 	return;
@@ -1035,9 +1098,9 @@ void sl_drv_impl_open(eapi_ctx_t* ctx,cbuf_t* c_out)
 	put_error(c_out, "eaccess");
     else {
 #ifdef __WIN32__
-	driver_select(slp->port,(ErlDrvEvent)slp->stat.hEvent,DO_READ,1);
+	driver_select(slp->port,DRV_EVENT(slp->stat.hEvent),ERL_DRV_READ,1);
 #else
-	driver_select(slp->port,(ErlDrvEvent)slp->com, DO_READ, 1);
+	driver_select(slp->port,DRV_EVENT(slp->com), ERL_DRV_READ, 1);
 #endif
 	put_ok(c_out);
     }
