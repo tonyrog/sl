@@ -12,7 +12,7 @@ SL_DRV_OBJS = \
 	$(OBJDIR)/$(EAPI_PFX)sl_drv.o \
 	$(OBJDIR)/$(EAPI_PFX)sl_drv_impl.o
 
-EAPI_LIB = $(EAPI_DIR)/lib/$(TYPE)/eapi_drv.a
+EAPI_LIB = $(EAPI_DIR)/lib/$(TYPE)/$(EAPI_PFX)eapi_drv.a
 
 all:
 	$(MAKE) driver TYPE=debug
