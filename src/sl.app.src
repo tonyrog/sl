@@ -1,6 +1,6 @@
 {application, sl,
  [{description, "Serial line controller"},
-  {vsn, "%VSN%"},
+  {vsn, git},
   {modules, [sl,sl_drv]},
   {registered, []},
   {env, []},
