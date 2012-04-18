@@ -146,7 +146,7 @@ close(SL) ->
     erlang:port_close(SL).
 
 sl_revert(SL) ->
-    sl_drv:reverse(SL).
+    sl_drv:revert(SL).
 
 break(SL) ->
     sl_drv:break(SL).
