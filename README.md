@@ -1,5 +1,6 @@
-sl
+sl - DEPRECATED
 =====
+Use tonyrog/uart instead, a cross platform library (read, windows support)
 
 
 ### Dependencies
